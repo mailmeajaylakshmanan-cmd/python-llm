@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduGenie — AI Learning Workspace</title>
+    <!-- Modern Geometric & Tactile Fonts: Plus Jakarta Sans, Outfit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Marked.js for Markdown Rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Tactile Neumorphic & Deep Teal Design System -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Top Navigation (Tactile Sand Surface) -->
+        <header class="top-nav">
+            <div class="nav-brand">
+                <div class="brand-badge" title="EduGenie AI Core">
+                    <i data-lucide="sparkles"></i>
+                </div>
+                <div class="brand-titles">
+                    <div class="brand-row">
+                        <span class="brand-name">EduGenie</span>
+                        <span class="version-tag">Workspace</span>
+                    </div>
+                    <span class="brand-sub">Intelligent Learning & Knowledge System</span>
+                </div>
+            </div>
+
+            <div class="nav-controls">
+                <!-- Command Palette Trigger -->
+                <button class="command-trigger" onclick="openSelectionModal()" title="Open Command Palette (Ctrl+K)">
+                    <i data-lucide="search" class="cmd-icon"></i>
+                    <span class="cmd-text">Search modes, demos, or models...</span>
+                    <kbd class="cmd-kbd">Ctrl K</kbd>
+                </button>
+
+                <!-- System Status Pill -->
+                <div class="system-status-pill {% if has_api_key %}status-ready{% else %}status-alert{% endif %}" onclick="openSelectionModal('settings')" title="Configure AI Model & Inference Engine">
+                    <span class="status-indicator-dot"></span>
+                    <span class="status-label" id="header-status-text">{% if has_api_key %}Gemini 3.8 Flash{% else %}API Key Required{% endif %}</span>
+                    <i data-lucide="sliders-horizontal" class="status-icon"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Alert Banner (Feedback Section from Design System) -->
+        {% if not has_api_key %}
+        <div class="alert-banner" id="system-alert-banner">
+            <div class="alert-banner-left">
+                <div class="alert-banner-icon">
+                    <i data-lucide="info"></i>
+                </div>
+                <span>Gemini API Key missing in <code>.env</code>. Local fallback (LaMini-Flan-T5) is active for offline processing.</span>
+            </div>
+            <button class="alert-banner-btn" onclick="openSelectionModal('settings')">Configure Settings</button>
+        </div>
+        {% endif %}
+
+        <!-- Preset Demos Strip (Tactile Pill Container) -->
+        <section class="preset-strip">
+            <div class="preset-strip-inner">
+                <span class="preset-label">
+                    <i data-lucide="compass"></i> Quick Demos:
+                </span>
+                <div class="preset-pills">
+                    <button class="preset-pill" onclick="loadScenario('qna', 'Which is the largest ocean on Earth and what are its key geographic features?')">
+                        <span class="pill-dot blue"></span>
+                        <span class="pill-title">Pacific Ocean</span>
+                        <span class="pill-cat">Q&A</span>
+                    </button>
+                    <button class="preset-pill" onclick="loadScenario('quiz', 'The Pythagoras Theorem states that in a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides: a² + b² = c².')">
+                        <span class="pill-dot emerald"></span>
+                        <span class="pill-title">Pythagoras Theorem</span>
+                        <span class="pill-cat">Quiz</span>
+                    </button>
+                    <button class="preset-pill" onclick="loadScenario('learn', 'SQL Mastery, Query Optimization, and Database Architecture')">
+                        <span class="pill-dot violet"></span>
+                        <span class="pill-title">SQL Architecture</span>
+                        <span class="pill-cat">Roadmap</span>
+                    </button>
+                    <button class="preset-pill" onclick="loadScenario('explain', 'Quantum Computing, Superposition, and Qubits')">
+                        <span class="pill-dot purple"></span>
+                        <span class="pill-title">Quantum Computing</span>
+                        <span class="pill-cat">Explain</span>
+                    </button>
+                    <button class="preset-pill" onclick="loadScenario('summary', 'The Industrial Revolution, which began in Britain in the late 18th century, transformed economies from agrarian and handicraft-based to industrial and machine-driven. New inventions like the steam engine, power loom, and smelting techniques enabled unprecedented mass production. Cities grew rapidly as rural workers migrated to factories, fundamentally changing social structures, labor laws, and international trade.')">
+                        <span class="pill-dot amber"></span>
+                        <span class="pill-title">Industrial Revolution</span>
+                        <span class="pill-cat">Summary</span>
+                    </button>
+                    <button class="preset-pill-more" onclick="openSelectionModal('scenarios')">
+                        <i data-lucide="more-horizontal"></i> All Demos
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Workspace Grid (Level 3 Elevation Raised Layers) -->
+        <main class="workspace-grid">
+
+            <!-- 1. Q&A Workspace Card -->
+            <section class="card" id="card-qna">
+                <div class="card-top">
+                    <div class="card-meta">
+                        <div class="card-icon-frame">
+                            <i data-lucide="help-circle"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title">Ask EduGenie</h2>
+                            <p class="card-subtitle">Academic Q&A with grounded reasoning and concise answers</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="qna-form" onsubmit="handleQnA(event)">
+                    <div class="input-row">
+                        <input type="text" id="qna-input" class="compact-input" placeholder="Ask any question (e.g., Why is the sky blue?)..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" id="qna-submit-btn">
+                            <span>Submit Now</span>
+                            <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="output-panel hidden" id="qna-result">
+                    <div class="output-header">
+                        <span class="output-title"><i data-lucide="check-circle-2"></i> Answer & Solution</span>
+                        <button class="btn-icon" onclick="copyText('qna-output')" title="Copy content"><i data-lucide="copy"></i></button>
+                    </div>
+                    <div class="output-body markdown-body" id="qna-output"></div>
+                </div>
+            </section>
+
+            <!-- 2. Concept Explainer Workspace Card -->
+            <section class="card" id="card-explain">
+                <div class="card-top">
+                    <div class="card-meta">
+                        <div class="card-icon-frame">
+                            <i data-lucide="book-open"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title">Concept Explainer</h2>
+                            <p class="card-subtitle">Clear, structured breakdown of complex subjects without unnecessary jargon</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="explain-form" onsubmit="handleExplain(event)">
+                    <div class="input-row">
+                        <input type="text" id="explain-input" class="compact-input" placeholder="Topic to break down (e.g., Photosynthesis, Binary Search)..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" id="explain-submit-btn">
+                            <span>Explain</span>
+                            <i data-lucide="sparkles"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="output-panel hidden" id="explain-result">
+                    <div class="output-header">
+                        <span class="output-title"><i data-lucide="book-marked"></i> Structured Breakdown</span>
+                        <button class="btn-icon" onclick="copyText('explain-output')" title="Copy content"><i data-lucide="copy"></i></button>
+                    </div>
+                    <div class="output-body markdown-body" id="explain-output"></div>
+                </div>
+            </section>
+
+            <!-- 3. Text Summarizer Workspace Card -->
+            <section class="card" id="card-summary">
+                <div class="card-top">
+                    <div class="card-meta">
+                        <div class="card-icon-frame">
+                            <i data-lucide="file-text"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title">Text Summarizer</h2>
+                            <p class="card-subtitle">Condense study passages into essential takeaways and bullet points</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="summary-form" onsubmit="handleSummary(event)">
+                    <div class="input-stack">
+                        <textarea id="summary-input" class="compact-textarea" rows="3" placeholder="Paste study material, chapter excerpt, or notes to summarize..." required></textarea>
+                        <div class="stack-footer">
+                            <span class="char-counter" id="summary-char-count">0 chars</span>
+                            <button type="submit" class="btn btn-primary" id="summary-submit-btn">
+                                <span>Summarize</span>
+                                <i data-lucide="file-check-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <div class="output-panel hidden" id="summary-result">
+                    <div class="output-header">
+                        <span class="output-title"><i data-lucide="list"></i> Key Points & Summary</span>
+                        <button class="btn-icon" onclick="copyText('summary-output')" title="Copy content"><i data-lucide="copy"></i></button>
+                    </div>
+                    <div class="output-body markdown-body" id="summary-output"></div>
+                </div>
+            </section>
+
+            <!-- 4. Interactive Quiz Workspace Card -->
+            <section class="card" id="card-quiz">
+                <div class="card-top">
+                    <div class="card-meta">
+                        <div class="card-icon-frame">
+                            <i data-lucide="layers"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title">Quiz Assessment</h2>
+                            <p class="card-subtitle">Generate 3 interactive multiple-choice questions with automated grading</p>
+                        </div>
+                    </div>
+                </div>
+                <form id="quiz-form" onsubmit="handleQuiz(event)">
+                    <div class="input-stack">
+                        <textarea id="quiz-input" class="compact-textarea" rows="2" placeholder="Enter topic or paste text to generate quiz (e.g., Ohm's Law, Cell Biology)..." required></textarea>
+                        <div class="stack-footer">
+                            <span class="helper-note"><i data-lucide="info"></i> Generates 4-choice questions</span>
+                            <button type="submit" class="btn btn-primary" id="quiz-submit-btn">
+                                <span>Generate Quiz</span>
+                                <i data-lucide="play"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <div class="output-panel hidden" id="quiz-result">
+                    <div class="output-header">
+                        <span class="output-title"><i data-lucide="award"></i> Assessment Questions</span>
+                        <span class="score-pill hidden" id="quiz-score-badge">Score: 0/3</span>
+                    </div>
+                    <div class="quiz-stack" id="quiz-output"></div>
+                </div>
+            </section>
+
+            <!-- 5. Learning Roadmap Workspace Card (Full Span) -->
+            <section class="card span-full" id="card-learn">
+                <div class="card-top">
+                    <div class="card-meta">
+                        <div class="card-icon-frame">
+                            <i data-lucide="milestone"></i>
+                        </div>
+                        <div>
+                            <h2 class="card-title">Learning Roadmap Generator</h2>
+                            <p class="card-subtitle">Step-by-step curriculum with milestones, prerequisite breakdown, and study resources</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4-Step Process Visual Stepper from Design System -->
+                <div class="stepper-progress">
+                    <div class="step-node active">
+                        <div class="step-circle">1</div>
+                        <span class="step-title">Fundamentals</span>
+                    </div>
+                    <div class="step-node active">
+                        <div class="step-circle">2</div>
+                        <span class="step-title">Core Concepts</span>
+                    </div>
+                    <div class="step-node">
+                        <div class="step-circle">3</div>
+                        <span class="step-title">Advanced</span>
+                    </div>
+                    <div class="step-node">
+                        <div class="step-circle">4</div>
+                        <span class="step-title">Mastery</span>
+                    </div>
+                </div>
+
+                <form id="learn-form" onsubmit="handleLearningPath(event)">
+                    <div class="input-row">
+                        <input type="text" id="learn-input" class="compact-input" placeholder="Skill or domain to master (e.g., Cloud Architecture, Data Science, Rust, Calculus)..." required autocomplete="off">
+                        <button type="submit" class="btn btn-primary" id="learn-submit-btn">
+                            <span>Build Roadmap</span>
+                            <i data-lucide="compass"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="output-panel hidden" id="learn-result">
+                    <div class="output-header">
+                        <span class="output-title"><i data-lucide="map"></i> Structured Curriculum</span>
+                        <button class="btn-icon" onclick="copyText('learn-output')" title="Copy content"><i data-lucide="copy"></i></button>
+                    </div>
+                    <div class="output-body markdown-body" id="learn-output"></div>
+                </div>
+            </section>
+
+        </main>
+
+        <footer class="app-footer">
+            <span>EduGenie Learning System &bull; Powered by Google Gemini &bull; Tactile Neumorphic UI</span>
+        </footer>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- COMMAND PALETTE & SELECTION MODAL (Level 4 Elevation)          -->
+    <!-- ============================================================== -->
+    <div id="selection-modal-backdrop" class="cmd-backdrop hidden" onclick="handleBackdropClick(event)">
+        <div id="selection-modal" class="cmd-modal" role="dialog" aria-modal="true">
+            
+            <!-- Search Bar -->
+            <div class="cmd-search-bar">
+                <i data-lucide="search" class="cmd-search-icon"></i>
+                <input type="text" id="modal-search-input" class="cmd-search-field" placeholder="Type a mode, topic, demo, or configuration..." oninput="filterModalItems(this.value)" autocomplete="off">
+                <button class="cmd-clear-btn hidden" id="search-clear-btn" onclick="clearModalSearch()">
+                    <i data-lucide="x"></i>
+                </button>
+                <button class="cmd-close-btn" onclick="closeSelectionModal()" title="Close (ESC)">
+                    <kbd>ESC</kbd>
+                </button>
+            </div>
+
+            <!-- Segmented Category Tabs (Matching Navigation Tabs in Design Image) -->
+            <div class="cmd-segmented-nav">
+                <button class="cmd-nav-item active" id="tab-btn-all" onclick="switchModalTab('all')">
+                    <span>All</span>
+                    <span class="cmd-count" id="count-all">13</span>
+                </button>
+                <button class="cmd-nav-item" id="tab-btn-modules" onclick="switchModalTab('modules')">
+                    <span>Modules</span>
+                    <span class="cmd-count" id="count-modules">5</span>
+                </button>
+                <button class="cmd-nav-item" id="tab-btn-scenarios" onclick="switchModalTab('scenarios')">
+                    <span>Demos</span>
+                    <span class="cmd-count" id="count-scenarios">8</span>
+                </button>
+                <button class="cmd-nav-item" id="tab-btn-settings" onclick="switchModalTab('settings')">
+                    <span>Model & Settings</span>
+                </button>
+            </div>
+
+            <!-- Command Palette Results List -->
+            <div class="cmd-content-scroll" id="modal-body-container">
+
+                <!-- 1. Grid/List of Actionable Items -->
+                <div class="cmd-items-list" id="modal-cards-grid">
+
+                    <!-- MODULES -->
+                    <div class="cmd-row-item" data-category="modules" data-title="Ask EduGenie Q&A" data-keywords="question answer ask doubts help facts query" onclick="selectAndLaunch('qna')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="help-circle"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Ask EduGenie</span>
+                                    <span class="cmd-tag-module">Module</span>
+                                </div>
+                                <span class="cmd-row-desc">Ask academic or general knowledge queries for direct, reasoned answers.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Launch <i data-lucide="corner-down-left"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="modules" data-title="Concept Explainer" data-keywords="explain concept breakdown clarify beginner simple eli5" onclick="selectAndLaunch('explain')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="book-open"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Concept Explainer</span>
+                                    <span class="cmd-tag-module">Module</span>
+                                </div>
+                                <span class="cmd-row-desc">Clear, beginner-friendly explanations of complex theories and algorithms.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Launch <i data-lucide="corner-down-left"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="modules" data-title="Text Summarizer" data-keywords="summary condense key points notes revision passage article" onclick="selectAndLaunch('summary')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="file-text"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Text Summarizer</span>
+                                    <span class="cmd-tag-module">Module</span>
+                                </div>
+                                <span class="cmd-row-desc">Condense long educational chapters and passages into high-yield key points.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Launch <i data-lucide="corner-down-left"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="modules" data-title="Quiz Assessment" data-keywords="quiz mcq test practice questions exam test prep" onclick="selectAndLaunch('quiz')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="layers"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Quiz Assessment</span>
+                                    <span class="cmd-tag-module">Module</span>
+                                </div>
+                                <span class="cmd-row-desc">Generate 3 rigorous multiple-choice questions with automated instant grading.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Launch <i data-lucide="corner-down-left"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="modules" data-title="Learning Roadmap" data-keywords="roadmap curriculum guide milestones resources beginner advanced" onclick="selectAndLaunch('learn')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="milestone"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Learning Roadmap</span>
+                                    <span class="cmd-tag-module">Module</span>
+                                </div>
+                                <span class="cmd-row-desc">Personalized 4-tier milestone curriculum with recommended textbooks and tools.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Launch <i data-lucide="corner-down-left"></i></span>
+                        </div>
+                    </div>
+
+                    <!-- PRESET DEMOS -->
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Pacific Ocean Geography" data-keywords="ocean geography pacific largest earth water mariana trench" onclick="selectAndLaunchScenario('qna', 'Which is the largest ocean on Earth and what are its key geographic features?')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="globe"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Pacific Ocean & Deep Trenches</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Geographic dimensions, Mariana Trench depth, and biodiversity.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Pythagoras Theorem Quiz" data-keywords="math geometry pythagoras hypotenuse triangle formula quiz" onclick="selectAndLaunchScenario('quiz', 'The Pythagoras Theorem states that in a right-angled triangle, the square of the hypotenuse is equal to the sum of the squares of the other two sides: a² + b² = c².')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="check-square"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Pythagoras Theorem Assessment</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Multiple-choice evaluation on right-angle geometry and hypotenuse equations.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="SQL Architecture Roadmap" data-keywords="sql database queries indexing postgres joins database design" onclick="selectAndLaunchScenario('learn', 'SQL Mastery, Query Optimization, and Database Architecture')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="database"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">SQL & Database Architecture</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Curriculum from basic queries to query optimization, indexing, and normalization.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Quantum Computing Breakdown" data-keywords="quantum computing physics qubits superposition entanglement" onclick="selectAndLaunchScenario('explain', 'Quantum Computing, Superposition, and Qubits')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="cpu"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Quantum Computing & Qubits</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Superposition, quantum entanglement, and quantum gates explained clearly.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Industrial Revolution Summary" data-keywords="history industrial revolution factories steam engine economy" onclick="selectAndLaunchScenario('summary', 'The Industrial Revolution, which began in Britain in the late 18th century, transformed economies from agrarian and handicraft-based to industrial and machine-driven. New inventions like the steam engine, power loom, and smelting techniques enabled unprecedented mass production. Cities grew rapidly as rural workers migrated to factories, fundamentally changing social structures, labor laws, and international trade.')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="clock"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Industrial Revolution Summary</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Condenses economic and technological shift into structured key points.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="DNA & Genetics Explain" data-keywords="dna biology genetics rna genes heredity double helix" onclick="selectAndLaunchScenario('explain', 'DNA structure, Genes, and Heredity')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="dna"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">DNA, Genes & Heredity</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Genetic code structure, base pairing, and inheritance mechanisms.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Neural Networks Roadmap" data-keywords="deep learning machine learning neural networks pytorch ai" onclick="selectAndLaunchScenario('learn', 'Deep Learning and Neural Networks with PyTorch')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="git-branch"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Deep Learning & PyTorch</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Master backpropagation, CNNs, Transformers, and PyTorch training.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="cmd-row-item" data-category="scenarios" data-title="Ohm's Law Physics Quiz" data-keywords="physics electricity ohms law voltage current resistance" onclick="selectAndLaunchScenario('quiz', 'Ohm\'s Law states that the current through a conductor between two points is directly proportional to the voltage across the two points: V = I * R, where V is voltage in volts, I is current in amperes, and R is resistance in ohms.')">
+                        <div class="cmd-row-left">
+                            <div class="cmd-icon-box"><i data-lucide="zap"></i></div>
+                            <div class="cmd-row-text">
+                                <div class="cmd-row-headline">
+                                    <span class="cmd-row-title">Ohm's Law Circuit Quiz</span>
+                                    <span class="cmd-tag-demo">Demo</span>
+                                </div>
+                                <span class="cmd-row-desc">Assess electrical resistance, voltage, and circuit calculations.</span>
+                            </div>
+                        </div>
+                        <div class="cmd-row-right">
+                            <span class="cmd-action-hint">Run <i data-lucide="play"></i></span>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Empty Search State -->
+                <div class="cmd-empty-state hidden" id="modal-empty-state">
+                    <i data-lucide="search-x" class="empty-icon"></i>
+                    <h4>No matching modes or scenarios</h4>
+                    <p>Try searching for "Quiz", "SQL", "Roadmap", or "Physics"</p>
+                </div>
+
+                <!-- 2. Settings & Model Configuration Panel -->
+                <div class="cmd-settings-panel hidden" id="modal-settings-panel">
+                    
+                    <div class="settings-group">
+                        <label class="settings-label">Active Inference Engine</label>
+                        <div class="segmented-model-list">
+                            
+                            <label class="model-compact-card active" id="model-card-gemini-3.8-flash">
+                                <input type="radio" name="ai_model" value="models/gemini-3.8-flash" checked onchange="handleModelRadioChange(this.value)">
+                                <div class="model-compact-body">
+                                    <div class="model-compact-header">
+                                        <span class="model-title">Gemini 3.8 Flash</span>
+                                        <span class="model-pill-badge rec">Default</span>
+                                    </div>
+                                    <span class="model-info">Sub-second latency & high reasoning accuracy for general study.</span>
+                                </div>
+                            </label>
+
+                            <label class="model-compact-card" id="model-card-gemini-3.7-flash">
+                                <input type="radio" name="ai_model" value="models/gemini-3.7-flash" onchange="handleModelRadioChange(this.value)">
+                                <div class="model-compact-body">
+                                    <div class="model-compact-header">
+                                        <span class="model-title">Gemini 3.7 Flash</span>
+                                        <span class="model-pill-badge pro">Hybrid</span>
+                                    </div>
+                                    <span class="model-info">Balanced hybrid reasoning for mathematical problem-solving.</span>
+                                </div>
+                            </label>
+
+                            <label class="model-compact-card" id="model-card-gemini-pro-latest">
+                                <input type="radio" name="ai_model" value="models/gemini-pro-latest" onchange="handleModelRadioChange(this.value)">
+                                <div class="model-compact-body">
+                                    <div class="model-compact-header">
+                                        <span class="model-title">Gemini Pro Latest</span>
+                                        <span class="model-pill-badge deep">Deep Thinking</span>
+                                    </div>
+                                    <span class="model-info">Maximum depth reasoning for complex scientific proofs.</span>
+                                </div>
+                            </label>
+
+                            <label class="model-compact-card" id="model-card-local">
+                                <input type="radio" name="ai_model" value="local_lamini" onchange="handleModelRadioChange(this.value)">
+                                <div class="model-compact-body">
+                                    <div class="model-compact-header">
+                                        <span class="model-title">LaMini-Flan-T5</span>
+                                        <span class="model-pill-badge local">Offline</span>
+                                    </div>
+                                    <span class="model-info">Local HuggingFace model running on hardware for offline privacy.</span>
+                                </div>
+                            </label>
+
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <label class="settings-label">Target Learner Level</label>
+                        <div class="segmented-control-row">
+                            <button type="button" class="segment-btn active" onclick="selectAudience(this, 'High School')">High School</button>
+                            <button type="button" class="segment-btn" onclick="selectAudience(this, 'University')">University</button>
+                            <button type="button" class="segment-btn" onclick="selectAudience(this, 'Professional')">Professional</button>
+                            <button type="button" class="segment-btn" onclick="selectAudience(this, 'ELI5')">ELI5 (Simplified)</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <label class="settings-label">Response Tone & Depth</label>
+                        <div class="segmented-control-row">
+                            <button type="button" class="segment-btn active" onclick="selectTone(this, 'Balanced')">Balanced</button>
+                            <button type="button" class="segment-btn" onclick="selectTone(this, 'Concise')">Concise</button>
+                            <button type="button" class="segment-btn" onclick="selectTone(this, 'Deep')">In-Depth</button>
+                            <button type="button" class="segment-btn" onclick="selectTone(this, 'Socratic')">Socratic</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-footer-row">
+                        <span class="settings-note"><i data-lucide="check"></i> Preferences persist across active session</span>
+                        <button class="btn btn-primary btn-sm" onclick="saveSettings()">
+                            <span>Save Preferences</span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Command Palette Footer Key Guide -->
+            <div class="cmd-footer-bar">
+                <div class="cmd-keys-hint">
+                    <span><kbd>&uarr;</kbd><kbd>&darr;</kbd> to navigate</span>
+                    <span><kbd>&crarr;</kbd> to select</span>
+                    <span><kbd>ESC</kbd> to close</span>
+                </div>
+                <span class="cmd-engine-label">EduGenie Engine</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Floating Command Palette Button -->
+    <button class="floating-cmd-fab" onclick="openSelectionModal()" title="Command Palette (Ctrl+K)">
+        <i data-lucide="terminal"></i>
+        <span>Command Menu</span>
+        <kbd class="fab-kbd">Ctrl K</kbd>
+    </button>
+
+    <!-- Toast Notification (Styled like Toast Stack in Image) -->
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Script Logic -->
+    <script>
+        lucide.createIcons();
+
+        let currentActiveTab = 'all';
+        let selectedAudienceValue = 'High School';
+        let selectedToneValue = 'Balanced';
+        let selectedModelValue = 'models/gemini-3.8-flash';
+
+        // Load initial settings
+        async function fetchInitialSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.active_model) {
+                    selectedModelValue = data.active_model;
+                    highlightModelCard(selectedModelValue);
+                }
+            } catch (err) {
+                console.log("Using default model settings");
+            }
+        }
+        fetchInitialSettings();
+
+        // Character counter
+        const summaryInput = document.getElementById('summary-input');
+        const summaryCount = document.getElementById('summary-char-count');
+        if (summaryInput && summaryCount) {
+            summaryInput.addEventListener('input', () => {
+                summaryCount.innerText = `${summaryInput.value.length} chars`;
+            });
+        }
+
+        // Toast Stack
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.className = `toast toast-${type}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3200);
+        }
+
+        // Copy text helper
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("Copied to clipboard", "success");
+            });
+        }
+
+        // Loading state
+        function setLoading(btn, isLoading, originalHtml = `<span>Submit Now</span> <i data-lucide="arrow-right"></i>`) {
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `<span class="compact-spinner"></span> <span>Processing...</span>`;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                lucide.createIcons();
+            }
+        }
+
+        // ==========================================
+        // COMMAND PALETTE & MODAL LOGIC
+        // ==========================================
+        function openSelectionModal(targetTab = 'all') {
+            const backdrop = document.getElementById('selection-modal-backdrop');
+            const searchInput = document.getElementById('modal-search-input');
+
+            backdrop.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            switchModalTab(targetTab);
+
+            setTimeout(() => {
+                if (targetTab !== 'settings') {
+                    searchInput.focus();
+                }
+            }, 50);
+
+            lucide.createIcons();
+        }
+
+        function closeSelectionModal() {
+            const backdrop = document.getElementById('selection-modal-backdrop');
+            backdrop.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function handleBackdropClick(e) {
+            if (e.target.id === 'selection-modal-backdrop') {
+                closeSelectionModal();
+            }
+        }
+
+        // Global hotkeys
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+                e.preventDefault();
+                const backdrop = document.getElementById('selection-modal-backdrop');
+                if (backdrop.classList.contains('hidden')) {
+                    openSelectionModal();
+                } else {
+                    closeSelectionModal();
+                }
+            } else if (e.key === 'Escape') {
+                const backdrop = document.getElementById('selection-modal-backdrop');
+                if (!backdrop.classList.contains('hidden')) {
+                    closeSelectionModal();
+                }
+            }
+        });
+
+        // Tab Switching
+        function switchModalTab(tabName) {
+            currentActiveTab = tabName;
+            
+            document.querySelectorAll('.cmd-nav-item').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const grid = document.getElementById('modal-cards-grid');
+            const settingsPanel = document.getElementById('modal-settings-panel');
+            const emptyState = document.getElementById('modal-empty-state');
+            const searchBar = document.querySelector('.cmd-search-bar');
+
+            if (tabName === 'settings') {
+                grid.classList.add('hidden');
+                emptyState.classList.add('hidden');
+                settingsPanel.classList.remove('hidden');
+                searchBar.style.display = 'none';
+            } else {
+                grid.classList.remove('hidden');
+                settingsPanel.classList.add('hidden');
+                searchBar.style.display = 'flex';
+                filterModalItems(document.getElementById('modal-search-input').value);
+            }
+
+            lucide.createIcons();
+        }
+
+        // Filter items
+        function filterModalItems(query) {
+            const clearBtn = document.getElementById('search-clear-btn');
+            const cards = document.querySelectorAll('.cmd-row-item');
+            const emptyState = document.getElementById('modal-empty-state');
+            const cleanQuery = (query || '').toLowerCase().trim();
+
+            if (cleanQuery) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            let visibleCount = 0;
+
+            cards.forEach(card => {
+                const category = card.getAttribute('data-category');
+                const title = (card.getAttribute('data-title') || '').toLowerCase();
+                const keywords = (card.getAttribute('data-keywords') || '').toLowerCase();
+                const text = card.innerText.toLowerCase();
+
+                const matchesTab = (currentActiveTab === 'all') || (currentActiveTab === category);
+                const matchesSearch = !cleanQuery || title.includes(cleanQuery) || keywords.includes(cleanQuery) || text.includes(cleanQuery);
+
+                if (matchesTab && matchesSearch) {
+                    card.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    card.classList.add('hidden');
+                }
+            });
+
+            if (visibleCount === 0 && currentActiveTab !== 'settings') {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        function clearModalSearch() {
+            const input = document.getElementById('modal-search-input');
+            input.value = '';
+            filterModalItems('');
+            input.focus();
+        }
+
+        // Select & Launch Module
+        function selectAndLaunch(moduleId) {
+            closeSelectionModal();
+            const cardMap = {
+                'qna': 'card-qna',
+                'explain': 'card-explain',
+                'summary': 'card-summary',
+                'quiz': 'card-quiz',
+                'learn': 'card-learn'
+            };
+            const inputMap = {
+                'qna': 'qna-input',
+                'explain': 'explain-input',
+                'summary': 'summary-input',
+                'quiz': 'quiz-input',
+                'learn': 'learn-input'
+            };
+
+            const targetCard = document.getElementById(cardMap[moduleId]);
+            if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetCard.classList.remove('card-focused-ring');
+                void targetCard.offsetWidth;
+                targetCard.classList.add('card-focused-ring');
+
+                const targetInput = document.getElementById(inputMap[moduleId]);
+                if (targetInput) {
+                    targetInput.focus();
+                }
+            }
+        }
+
+        // Select & Launch Scenario Demo
+        function selectAndLaunchScenario(moduleId, promptText) {
+            closeSelectionModal();
+            loadScenario(moduleId, promptText);
+        }
+
+        // Model selection
+        function handleModelRadioChange(val) {
+            selectedModelValue = val;
+            highlightModelCard(val);
+        }
+
+        function highlightModelCard(modelVal) {
+            document.querySelectorAll('.model-compact-card').forEach(card => {
+                card.classList.remove('active');
+                const radio = card.querySelector('input[type="radio"]');
+                if (radio && radio.value === modelVal) {
+                    radio.checked = true;
+                    card.classList.add('active');
+                }
+            });
+        }
+
+        // Audience & Tone
+        function selectAudience(button, audience) {
+            button.parentElement.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+            selectedAudienceValue = audience;
+        }
+
+        function selectTone(button, tone) {
+            button.parentElement.querySelectorAll('.segment-btn').forEach(b => b.classList.remove('active'));
+            button.classList.add('active');
+            selectedToneValue = tone;
+        }
+
+        // Save Settings
+        async function saveSettings() {
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: selectedModelValue,
+                        audience: selectedAudienceValue,
+                        tone: selectedToneValue
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Updated: ${selectedModelValue.replace('models/', '')}`, 'success');
+                    const headerStatus = document.getElementById('header-status-text');
+                    if (headerStatus) {
+                        headerStatus.innerText = selectedModelValue.replace('models/', '');
+                    }
+                    setTimeout(() => {
+                        closeSelectionModal();
+                    }, 400);
+                }
+            } catch (err) {
+                showToast("Failed to save settings", "error");
+            }
+        }
+
+        // Load Scenario
+        function loadScenario(module, promptText) {
+            const cardMap = {
+                'qna': 'card-qna',
+                'explain': 'card-explain',
+                'summary': 'card-summary',
+                'quiz': 'card-quiz',
+                'learn': 'card-learn'
+            };
+
+            const targetCard = document.getElementById(cardMap[module]);
+            if (targetCard) {
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                targetCard.classList.remove('card-focused-ring');
+                void targetCard.offsetWidth;
+                targetCard.classList.add('card-focused-ring');
+            }
+
+            if (module === 'qna') {
+                document.getElementById('qna-input').value = promptText;
+                document.getElementById('qna-form').dispatchEvent(new Event('submit'));
+            } else if (module === 'explain') {
+                document.getElementById('explain-input').value = promptText;
+                document.getElementById('explain-form').dispatchEvent(new Event('submit'));
+            } else if (module === 'summary') {
+                document.getElementById('summary-input').value = promptText;
+                if (summaryCount) summaryCount.innerText = `${promptText.length} chars`;
+                document.getElementById('summary-form').dispatchEvent(new Event('submit'));
+            } else if (module === 'quiz') {
+                document.getElementById('quiz-input').value = promptText;
+                document.getElementById('quiz-form').dispatchEvent(new Event('submit'));
+            } else if (module === 'learn') {
+                document.getElementById('learn-input').value = promptText;
+                document.getElementById('learn-form').dispatchEvent(new Event('submit'));
+            }
+        }
+
+        // ==========================================
+        // 1. Q&A Handler
+        // ==========================================
+        async function handleQnA(e) {
+            e.preventDefault();
+            const input = document.getElementById('qna-input').value.trim();
+            if (!input) return;
+            const btn = document.getElementById('qna-submit-btn');
+            const resultBox = document.getElementById('qna-result');
+            const output = document.getElementById('qna-output');
+
+            setLoading(btn, true, `<span>Submit Now</span> <i data-lucide="arrow-right"></i>`);
+            resultBox.classList.remove('hidden');
+            output.innerHTML = `<div class="compact-loading-row"><span class="compact-spinner"></span><span>Consulting EduGenie knowledge base...</span></div>`;
+
+            try {
+                const res = await fetch(`/qa?question=${encodeURIComponent(input)}`);
+                const data = await res.json();
+                if (data.error) {
+                    output.innerHTML = `<div class="error-strip">${data.error}</div>`;
+                } else {
+                    output.innerHTML = marked.parse(data.answer);
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="error-strip">Network error: ${err.message}</div>`;
+            } finally {
+                setLoading(btn, false, `<span>Submit Now</span> <i data-lucide="arrow-right"></i>`);
+            }
+        }
+
+        // ==========================================
+        // 2. Explanation Handler
+        // ==========================================
+        async function handleExplain(e) {
+            e.preventDefault();
+            const topic = document.getElementById('explain-input').value.trim();
+            if (!topic) return;
+            const btn = document.getElementById('explain-submit-btn');
+            const resultBox = document.getElementById('explain-result');
+            const output = document.getElementById('explain-output');
+
+            setLoading(btn, true, `<span>Explain</span> <i data-lucide="sparkles"></i>`);
+            resultBox.classList.remove('hidden');
+            output.innerHTML = `<div class="compact-loading-row"><span class="compact-spinner"></span><span>Structuring breakdown...</span></div>`;
+
+            try {
+                const res = await fetch('/explain', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic: topic })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    output.innerHTML = `<div class="error-strip">${data.error}</div>`;
+                } else {
+                    output.innerHTML = marked.parse(data.explanation);
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="error-strip">Network error: ${err.message}</div>`;
+            } finally {
+                setLoading(btn, false, `<span>Explain</span> <i data-lucide="sparkles"></i>`);
+            }
+        }
+
+        // ==========================================
+        // 3. Summary Handler
+        // ==========================================
+        async function handleSummary(e) {
+            e.preventDefault();
+            const text = document.getElementById('summary-input').value.trim();
+            if (!text) return;
+            const btn = document.getElementById('summary-submit-btn');
+            const resultBox = document.getElementById('summary-result');
+            const output = document.getElementById('summary-output');
+
+            setLoading(btn, true, `<span>Summarize</span> <i data-lucide="file-check-2"></i>`);
+            resultBox.classList.remove('hidden');
+            output.innerHTML = `<div class="compact-loading-row"><span class="compact-spinner"></span><span>Extracting key points & core summary...</span></div>`;
+
+            try {
+                const res = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                const data = await res.json();
+                if (data.error) {
+                    output.innerHTML = `<div class="error-strip">${data.error}</div>`;
+                } else {
+                    output.innerHTML = marked.parse(data.summary);
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="error-strip">Network error: ${err.message}</div>`;
+            } finally {
+                setLoading(btn, false, `<span>Summarize</span> <i data-lucide="file-check-2"></i>`);
+            }
+        }
+
+        // ==========================================
+        // 4. Quiz Assessment Handler
+        // ==========================================
+        let currentQuizData = [];
+        let userScore = 0;
+        let answeredQuestions = new Set();
+
+        async function handleQuiz(e) {
+            e.preventDefault();
+            const text = document.getElementById('quiz-input').value.trim();
+            if (!text) return;
+            const btn = document.getElementById('quiz-submit-btn');
+            const resultBox = document.getElementById('quiz-result');
+            const output = document.getElementById('quiz-output');
+            const scoreBadge = document.getElementById('quiz-score-badge');
+
+            setLoading(btn, true, `<span>Generate Quiz</span> <i data-lucide="play"></i>`);
+            resultBox.classList.remove('hidden');
+            scoreBadge.classList.add('hidden');
+            output.innerHTML = `<div class="compact-loading-row"><span class="compact-spinner"></span><span>Generating assessment questions...</span></div>`;
+
+            try {
+                const res = await fetch('/quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                const data = await res.json();
+
+                if (data.quiz && data.quiz.length > 0 && !data.quiz[0].error) {
+                    currentQuizData = data.quiz;
+                    userScore = 0;
+                    answeredQuestions.clear();
+                    renderQuiz(currentQuizData);
+                } else {
+                    const err = (data.quiz && data.quiz[0] && data.quiz[0].error) || "Quiz generation failed.";
+                    output.innerHTML = `<div class="error-strip">${err}</div>`;
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="error-strip">Network error: ${err.message}</div>`;
+            } finally {
+                setLoading(btn, false, `<span>Generate Quiz</span> <i data-lucide="play"></i>`);
+            }
+        }
+
+        const optionLetters = ['A', 'B', 'C', 'D'];
+
+        function renderQuiz(questions) {
+            const container = document.getElementById('quiz-output');
+            let html = '';
+
+            questions.forEach((q, qIndex) => {
+                html += `
+                    <div class="compact-quiz-card" id="quiz-item-${qIndex}">
+                        <div class="quiz-head">
+                            <span class="q-seq-badge">Q${qIndex + 1}</span>
+                            <h4 class="q-text">${q.question}</h4>
+                        </div>
+                        <div class="compact-options-list">
+                            ${q.options.map((opt, optIndex) => `
+                                <label class="compact-option-row" id="opt-label-${qIndex}-${optIndex}" onclick="selectQuizOption(${qIndex}, ${optIndex})">
+                                    <input type="radio" name="q_${qIndex}" value="${encodeURIComponent(opt)}" class="quiz-radio-native">
+                                    <span class="opt-letter-tag">${optionLetters[optIndex] || '•'}</span>
+                                    <span class="opt-string">${opt}</span>
+                                </label>
+                            `).join('')}
+                        </div>
+                        <div class="quiz-action-bar">
+                            <button type="button" class="btn btn-secondary btn-sm" id="check-btn-${qIndex}" onclick="checkAnswer(${qIndex})">
+                                <span>Check Answer</span>
+                            </button>
+                            <span class="quiz-feedback-text" id="feedback-${qIndex}"></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function selectQuizOption(qIndex, optIndex) {
+            if (answeredQuestions.has(qIndex)) return;
+            const item = document.getElementById(`quiz-item-${qIndex}`);
+            item.querySelectorAll('.compact-option-row').forEach(c => c.classList.remove('selected'));
+            const chosen = document.getElementById(`opt-label-${qIndex}-${optIndex}`);
+            if (chosen) chosen.classList.add('selected');
+        }
+
+        function checkAnswer(qIndex) {
+            const question = currentQuizData[qIndex];
+            const selected = document.querySelector(`input[name="q_${qIndex}"]:checked`);
+            const feedback = document.getElementById(`feedback-${qIndex}`);
+            const checkBtn = document.getElementById(`check-btn-${qIndex}`);
+            const scoreBadge = document.getElementById('quiz-score-badge');
+
+            if (!selected) {
+                feedback.innerHTML = `<span class="feedback-warn">Select an option to evaluate.</span>`;
+                return;
+            }
+
+            const chosenValue = decodeURIComponent(selected.value).trim();
+            const correctValue = (question.answer || "").trim();
+            const isCorrect = (chosenValue.toLowerCase() === correctValue.toLowerCase());
+
+            document.querySelectorAll(`input[name="q_${qIndex}"]`).forEach(input => input.disabled = true);
+            checkBtn.disabled = true;
+
+            question.options.forEach((opt, optIndex) => {
+                const label = document.getElementById(`opt-label-${qIndex}-${optIndex}`);
+                if (opt.trim().toLowerCase() === correctValue.toLowerCase()) {
+                    label.classList.add('option-correct');
+                } else if (chosenValue.toLowerCase() === opt.trim().toLowerCase()) {
+                    label.classList.add('option-wrong');
+                }
+            });
+
+            if (isCorrect) {
+                feedback.innerHTML = `<span class="feedback-correct">Correct!</span>`;
+                if (!answeredQuestions.has(qIndex)) {
+                    userScore++;
+                }
+            } else {
+                feedback.innerHTML = `<span class="feedback-incorrect">Incorrect. Answer: <strong>${correctValue}</strong></span>`;
+            }
+
+            answeredQuestions.add(qIndex);
+            scoreBadge.innerText = `Score: ${userScore}/${currentQuizData.length}`;
+            scoreBadge.classList.remove('hidden');
+        }
+
+        // ==========================================
+        // 5. Learning Path Handler
+        // ==========================================
+        async function handleLearningPath(e) {
+            e.preventDefault();
+            const topic = document.getElementById('learn-input').value.trim();
+            if (!topic) return;
+            const btn = document.getElementById('learn-submit-btn');
+            const resultBox = document.getElementById('learn-result');
+            const output = document.getElementById('learn-output');
+
+            setLoading(btn, true, `<span>Build Roadmap</span> <i data-lucide="compass"></i>`);
+            resultBox.classList.remove('hidden');
+            output.innerHTML = `<div class="compact-loading-row"><span class="compact-spinner"></span><span>Structuring milestones & resources...</span></div>`;
+
+            try {
+                const res = await fetch(`/learn/recommendations?topic=${encodeURIComponent(topic)}`);
+                const data = await res.json();
+                if (data.error) {
+                    output.innerHTML = `<div class="error-strip">${data.error}</div>`;
+                } else {
+                    output.innerHTML = marked.parse(data.recommendation);
+                }
+            } catch (err) {
+                output.innerHTML = `<div class="error-strip">Network error: ${err.message}</div>`;
+            } finally {
+                setLoading(btn, false, `<span>Build Roadmap</span> <i data-lucide="compass"></i>`);
+            }
+        }
+    </script>
+</body>
+</html>
