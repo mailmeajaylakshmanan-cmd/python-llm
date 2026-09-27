@@ -1,4 +1,5 @@
 import os
+import asyncio
 from typing import Optional
 from fastapi import FastAPI, Request, Form, Query, status
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -71,7 +72,7 @@ async def api_status():
     return {
         "status": "online",
         "gemini_configured": is_configured,
-        "model": os.getenv("GEMINI_MODEL", "models/gemini-3.8-flash")
+        "model": os.getenv("GEMINI_MODEL", "models/gemini-3.5-flash-lite")
     }
 
 
@@ -88,14 +89,14 @@ async def get_settings():
     """
     load_dotenv(override=True)
     api_key = os.getenv("GEMINI_API_KEY", "")
-    current_model = os.getenv("GEMINI_MODEL", "models/gemini-3.8-flash")
+    current_model = os.getenv("GEMINI_MODEL", "models/gemini-3.5-flash-lite")
     return {
         "gemini_configured": bool(api_key and api_key != "your_gemini_api_key_here"),
         "active_model": current_model,
         "available_models": [
-            {"id": "models/gemini-3.8-flash", "name": "Gemini 3.8 Flash", "desc": "Ultra-fast latency, high accuracy & best for interactive study", "tag": "Recommended"},
-            {"id": "models/gemini-3.7-flash", "name": "Gemini 3.7 Flash", "desc": "Hybrid reasoning, fast responses & advanced problem-solving", "tag": "High Intelligence"},
-            {"id": "models/gemini-pro-latest", "name": "Gemini Pro Latest", "desc": "Deep reasoning, advanced proofs & complex topics", "tag": "Deep Thinking"},
+            {"id": "models/gemini-3.5-flash-lite", "name": "Gemini 3.5 Flash-Lite", "desc": "Sub-second latency (1.2s), high throughput, ideal for real-time tutoring", "tag": "Fastest"},
+            {"id": "models/gemini-3.8-flash", "name": "Gemini 3.8 Flash", "desc": "Advanced reasoning & deep explanations", "tag": "High Accuracy"},
+            {"id": "models/gemini-3.7-flash", "name": "Gemini 3.7 Flash", "desc": "Hybrid mathematical reasoning", "tag": "Hybrid"},
             {"id": "local_lamini", "name": "LaMini-Flan-T5-783M", "desc": "Local HuggingFace model running on your machine", "tag": "Offline Fallback"}
         ]
     }
@@ -110,11 +111,10 @@ async def update_settings(payload: SettingsUpdateRequest):
         os.environ["GEMINI_MODEL"] = payload.model
     return {
         "success": True,
-        "active_model": os.getenv("GEMINI_MODEL", "models/gemini-3.8-flash"),
+        "active_model": os.getenv("GEMINI_MODEL", "models/gemini-3.5-flash-lite"),
         "audience": payload.audience or "General",
         "tone": payload.tone or "Balanced"
     }
-
 
 
 # ==========================================
@@ -122,23 +122,17 @@ async def update_settings(payload: SettingsUpdateRequest):
 # ==========================================
 @app.get("/qa")
 async def qna_get(question: str = Query(..., description="The student's question")):
-    """
-    Q&A endpoint via GET method as specified in EduGenie architecture.
-    """
     if not question.strip():
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide a question."}
         )
-    answer = answer_question_with_gemini(question)
+    answer = await asyncio.to_thread(answer_question_with_gemini, question)
     return {"question": question, "answer": answer}
 
 
 @app.post("/qa")
 async def qna_post(payload: Optional[QnARequest] = None, request: Request = None):
-    """
-    Q&A endpoint supporting JSON and Form submissions.
-    """
     question = ""
     if payload and payload.question:
         question = payload.question
@@ -155,7 +149,7 @@ async def qna_post(payload: Optional[QnARequest] = None, request: Request = None
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide a question."}
         )
-    answer = answer_question_with_gemini(question)
+    answer = await asyncio.to_thread(answer_question_with_gemini, question)
     return {"question": question, "answer": answer}
 
 
@@ -164,9 +158,6 @@ async def qna_post(payload: Optional[QnARequest] = None, request: Request = None
 # ==========================================
 @app.post("/explain")
 async def explain_api(request: Request):
-    """
-    Concept explanation endpoint using LaMini-Flan-T5 / Gemini fallback.
-    """
     topic = ""
     try:
         data = await request.json()
@@ -180,7 +171,7 @@ async def explain_api(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide a topic."}
         )
-    explanation = explain_topic(topic)
+    explanation = await asyncio.to_thread(explain_topic, topic)
     return {"topic": topic, "explanation": explanation}
 
 
@@ -189,9 +180,6 @@ async def explain_api(request: Request):
 # ==========================================
 @app.post("/quiz")
 async def quiz_api(request: Request):
-    """
-    Generates 3 MCQs from passage or topic.
-    """
     text = ""
     try:
         data = await request.json()
@@ -205,7 +193,7 @@ async def quiz_api(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide text or topic for quiz."}
         )
-    quiz = generate_quiz(text)
+    quiz = await asyncio.to_thread(generate_quiz, text)
     return {"quiz": quiz}
 
 
@@ -214,9 +202,6 @@ async def quiz_api(request: Request):
 # ==========================================
 @app.post("/summarize")
 async def summarize_api(request: Request):
-    """
-    Summarizes long educational text.
-    """
     text = ""
     try:
         data = await request.json()
@@ -230,7 +215,7 @@ async def summarize_api(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide text to summarize."}
         )
-    summary = summarize_text(text)
+    summary = await asyncio.to_thread(summarize_text, text)
     return {"summary": summary}
 
 
@@ -239,23 +224,17 @@ async def summarize_api(request: Request):
 # ==========================================
 @app.get("/learn/recommendations")
 async def learning_recommendation_api(topic: str = Query(..., description="The subject or skill to learn")):
-    """
-    Generates structured learning path via GET method.
-    """
     if not topic.strip():
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide a topic."}
         )
-    recommendation = get_learning_recommendations(topic)
+    recommendation = await asyncio.to_thread(get_learning_recommendations, topic)
     return {"topic": topic, "recommendation": recommendation}
 
 
 @app.post("/learn/recommendations")
 async def learning_recommendation_post(request: Request):
-    """
-    Generates structured learning path via POST method.
-    """
     topic = ""
     try:
         data = await request.json()
@@ -269,7 +248,7 @@ async def learning_recommendation_post(request: Request):
             status_code=status.HTTP_400_BAD_REQUEST,
             content={"error": "Please provide a topic."}
         )
-    recommendation = get_learning_recommendations(topic)
+    recommendation = await asyncio.to_thread(get_learning_recommendations, topic)
     return {"topic": topic, "recommendation": recommendation}
 
 

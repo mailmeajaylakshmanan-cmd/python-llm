@@ -13,7 +13,6 @@ def clean_json_block(text: str) -> str:
     """
     Cleans markdown code blocks (```json ... ```) from Gemini responses.
     """
-    # Remove markdown code blocks if present
     cleaned = re.sub(r'```json\s*', '', text, flags=re.IGNORECASE)
     cleaned = re.sub(r'```\s*', '', cleaned)
     return cleaned.strip()
@@ -22,14 +21,21 @@ def generate_quiz(text: str) -> List[Dict[str, Any]]:
     """
     Generates 3 multiple-choice questions (MCQs) with 4 options and the correct answer.
     """
+    load_dotenv(override=True)
     api_key = os.getenv("GEMINI_API_KEY", "")
     if not api_key or api_key == "your_gemini_api_key_here":
         return [{"error": "GEMINI_API_KEY is not set. Please add your key to .env file."}]
 
     try:
         genai.configure(api_key=api_key)
-        model_name = os.getenv("GEMINI_MODEL", "models/gemini-3.8-flash")
-        model = genai.GenerativeModel(model_name=model_name)
+        model_name = os.getenv("GEMINI_MODEL", "models/gemini-3.5-flash-lite")
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            generation_config={
+                "max_output_tokens": 1024,
+                "temperature": 0.5
+            }
+        )
 
         prompt = f"""You are a quiz generator for students.
 From the following topic or passage, create exactly 3 multiple-choice questions. 
@@ -66,11 +72,10 @@ Topic or Passage:
             elif "questions" in parsed and isinstance(parsed["questions"], list):
                 parsed = parsed["questions"]
             else:
-                # Wrap dict in list if single question
                 parsed = [parsed]
 
         return parsed
     except json.JSONDecodeError as jde:
-        return [{"error": f"Failed to parse quiz JSON: {str(jde)}. Raw output: {raw_text if 'raw_text' in locals() else ''}"}]
+        return [{"error": f"Failed to parse quiz JSON: {str(jde)}"}]
     except Exception as e:
         return [{"error": f"Error in Quiz generation: {str(e)}"}]
